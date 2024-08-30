@@ -838,8 +838,8 @@ int Yolo::detect(const cv::Mat &rgb, std::vector<Object> &objects, float prob_th
             float array[6];
             array[0] = rect.x;
             array[1] = rect.y;
-            array[2] = rect.width;
-            array[3] = rect.height;
+            array[2] = rect.x + rect.width;
+            array[3] = rect.y + rect.height;
             array[4] = (float) item.label;
             array[5] = item.prob * 100;
 

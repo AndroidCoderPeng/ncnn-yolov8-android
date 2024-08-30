@@ -80,20 +80,22 @@ class TargetDetectView constructor(context: Context, attrs: AttributeSet) : View
 
     private fun drawTarget(canvas: Canvas, it: YoloResult, label: String) {
         val textLength = textPaint.measureText(label)
-        //文字背景。数字仅为了纠正背景和文字以及边框对齐，因为坐标值转px时会丢失一次精度，转int会再丢失一次精度，最后会导致背景和文字以及边框无法完美对齐
+        val textRectWidth = textLength * 1.1 //文字背景宽度
+        val textRectHeight = textHeight * 1.1 //文字背景高度
+
         textRect.set(
             it.position[0].toInt(),
             it.position[1].toInt(),
-            (it.position[0] + textLength).toInt() + 10,
-            it.position[1].toInt() - textHeight
+            (it.position[0] + textRectWidth).toInt(),
+            (it.position[1] - textRectHeight).toInt()
         )
         canvas.drawRect(textRect, backgroundPaint)
 
         //画文字。数值是文字左右边距，可酌情调整
         canvas.drawText(
             label,
-            it.position[0] + (textLength + 10) / 2,
-            it.position[1] - 15,
+            (it.position[0] + textRectWidth / 2).toFloat(),
+            (it.position[1] - textRectHeight / 4).toFloat(),
             textPaint
         )
 
@@ -101,8 +103,8 @@ class TargetDetectView constructor(context: Context, attrs: AttributeSet) : View
         rect.set(
             it.position[0].toInt(),
             it.position[1].toInt(),
-            (it.position[0] + it.position[2]).toInt(),
-            (it.position[1] + it.position[3]).toInt()
+            it.position[2].toInt(),
+            it.position[3].toInt()
         )
         canvas.drawRect(rect, borderPaint)
     }
