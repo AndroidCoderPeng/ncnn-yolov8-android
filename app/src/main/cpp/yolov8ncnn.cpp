@@ -132,6 +132,9 @@ void MyNdkCamera::on_image_render(cv::Mat &rgb) const {
 
             //检测
             g_yolo->detect(rgb, objects);
+
+            //绘制
+            g_yolo->draw(rgb, objects);
         } else {
             draw_unsupported(rgb);
         }
@@ -209,13 +212,13 @@ Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_loadModel(JNIEnv *env, jobject thiz,
                 g_yolo = new Yolo;
             int state;
             if (use_classify) {
-                state = 0;
-            }
-            if (use_segmentation) {
                 state = 1;
             }
-            if (use_detect) {
+            if (use_segmentation) {
                 state = 2;
+            }
+            if (use_detect) {
+                state = 3;
             }
             g_yolo->j_state = state;
             g_yolo->load(
@@ -258,7 +261,7 @@ Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_loadMultiModel(JNIEnv *env, jobject thiz,
             } else {
                 if (!g_yolo)
                     g_yolo = new Yolo;
-                g_yolo->j_state = 1;
+                g_yolo->j_state = 2;
                 if (*id == 0) {
                     g_yolo->load(
                             mgr,

@@ -449,7 +449,7 @@ void Yolo::initNativeCallback(JavaVM *vm, jlong nativeObjAddr, jobject pJobject)
 }
 
 int Yolo::classify(const cv::Mat &rgb) {
-    if (j_state == 0) {
+    if (j_state == 1) {
         static const float scale_values[3] = {0.017f, 0.017f, 0.017f};
 
         int width = rgb.cols;
@@ -492,7 +492,7 @@ int Yolo::classify(const cv::Mat &rgb) {
 
 int Yolo::segmentation(const cv::Mat &rgb, std::vector<Object> &objects, float prob_threshold,
                        float nms_threshold) {
-    if (j_state == 1) {
+    if (j_state == 2) {
         int width = rgb.cols;
         int height = rgb.rows;
 
@@ -607,11 +607,13 @@ int Yolo::segmentation(const cv::Mat &rgb, std::vector<Object> &objects, float p
             }
 
             for (const auto &item: objects) {
+                auto rect = item.rect;
+
                 float array[6];
-                array[0] = item.rect.x;
-                array[1] = item.rect.y;
-                array[2] = item.rect.width;
-                array[3] = item.rect.height;
+                array[0] = rect.x;
+                array[1] = rect.y;
+                array[2] = rect.width;
+                array[3] = rect.height;
                 array[4] = (float) item.label;
                 array[5] = item.prob * 100;
 
@@ -679,11 +681,13 @@ int Yolo::segmentation(const cv::Mat &rgb, std::vector<Object> &objects, float p
             std::sort(objects.begin(), objects.end(), objects_area_greater);
 
             for (const auto &item: objects) {
+                auto rect = item.rect;
+
                 float array[6];
-                array[0] = item.rect.x;
-                array[1] = item.rect.y;
-                array[2] = item.rect.width;
-                array[3] = item.rect.height;
+                array[0] = rect.x;
+                array[1] = rect.y;
+                array[2] = rect.width;
+                array[3] = rect.height;
                 array[4] = (float) item.label;
                 array[5] = item.prob * 100;
 
@@ -703,7 +707,7 @@ int Yolo::segmentation(const cv::Mat &rgb, std::vector<Object> &objects, float p
 
 int Yolo::detect(const cv::Mat &rgb, std::vector<Object> &objects, float prob_threshold,
                  float nms_threshold) {
-    if (j_state == 2) {
+    if (j_state == 3) {
         int width = rgb.cols;
         int height = rgb.rows;
 
@@ -829,11 +833,13 @@ int Yolo::detect(const cv::Mat &rgb, std::vector<Object> &objects, float prob_th
         jobject arraylist_obj = env->NewObject(list_clazz, arraylist_init);
 
         for (const auto &item: objects) {
+            auto rect = item.rect;
+
             float array[6];
-            array[0] = item.rect.x;
-            array[1] = item.rect.y;
-            array[2] = item.rect.width;
-            array[3] = item.rect.height;
+            array[0] = rect.x;
+            array[1] = rect.y;
+            array[2] = rect.width;
+            array[3] = rect.height;
             array[4] = (float) item.label;
             array[5] = item.prob * 100;
 

@@ -17,6 +17,7 @@ class TargetDetectView constructor(context: Context, attrs: AttributeSet) : View
     private val textPaint by lazy { TextPaint() }
     private val backgroundPaint by lazy { Paint() }
     private val borderPaint by lazy { Paint() }
+    private val textRect by lazy { Rect() }
     private val rect by lazy { Rect() }
     private val classNames = arrayListOf(
         "三脚架", "三通", "人", "切断阀", "危险告知牌",
@@ -38,7 +39,7 @@ class TargetDetectView constructor(context: Context, attrs: AttributeSet) : View
         textPaint.color = Color.WHITE
         textPaint.isAntiAlias = true
         textPaint.textAlign = Paint.Align.CENTER
-        textPaint.textSize = 14f.sp2px(context)
+        textPaint.textSize = 16f.sp2px(context)
         val fontMetrics = textPaint.fontMetrics
         textHeight = (fontMetrics.bottom - fontMetrics.top).toInt()
 
@@ -48,7 +49,8 @@ class TargetDetectView constructor(context: Context, attrs: AttributeSet) : View
 
         borderPaint.color = Color.BLUE
         borderPaint.style = Paint.Style.STROKE
-        borderPaint.strokeWidth = 2f.dp2px(context) //设置线宽
+        borderPaint.strokeJoin = Paint.Join.ROUND
+        borderPaint.strokeWidth = 3f.dp2px(context) //设置线宽
         borderPaint.isAntiAlias = true
     }
 
@@ -79,28 +81,28 @@ class TargetDetectView constructor(context: Context, attrs: AttributeSet) : View
     private fun drawTarget(canvas: Canvas, it: YoloResult, label: String) {
         val textLength = textPaint.measureText(label)
         //文字背景。数字仅为了纠正背景和文字以及边框对齐，因为坐标值转px时会丢失一次精度，转int会再丢失一次精度，最后会导致背景和文字以及边框无法完美对齐
-        rect.set(
-            (it.position[0].dp2px(context)).toInt(),
-            (it.position[1].dp2px(context)).toInt(),
-            (it.position[0].dp2px(context) + textLength).toInt() + 10,
-            it.position[1].dp2px(context).toInt() - textHeight
+        textRect.set(
+            it.position[0].toInt(),
+            it.position[1].toInt(),
+            (it.position[0] + textLength).toInt() + 10,
+            it.position[1].toInt() - textHeight
         )
-        canvas.drawRect(rect, backgroundPaint)
+        canvas.drawRect(textRect, backgroundPaint)
 
         //画文字。数值是文字左右边距，可酌情调整
         canvas.drawText(
             label,
-            it.position[0].dp2px(context) + (textLength + 10) / 2,
-            it.position[1].dp2px(context) - 10,
+            it.position[0] + (textLength + 10) / 2,
+            it.position[1] - 15,
             textPaint
         )
 
         //画框
         rect.set(
-            (it.position[0].dp2px(context)).toInt(),
-            (it.position[1].dp2px(context)).toInt(),
-            (it.position[2] + it.position[0]).dp2px(context).toInt(),
-            (it.position[3] + it.position[1]).dp2px(context).toInt()
+            it.position[0].toInt(),
+            it.position[1].toInt(),
+            (it.position[0] + it.position[2]).toInt(),
+            (it.position[1] + it.position[3]).toInt()
         )
         canvas.drawRect(rect, borderPaint)
     }

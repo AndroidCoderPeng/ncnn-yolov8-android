@@ -10,8 +10,8 @@ import android.view.WindowManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.pengxh.kt.lite.base.KotlinBaseActivity
+import com.pengxh.kt.lite.extensions.dp2px
 import com.pengxh.kt.lite.extensions.toJson
-import com.pengxh.kt.lite.widget.dialog.AlertControlDialog
 import com.pengxh.ncnn.yolov8.databinding.ActivityMainBinding
 import org.opencv.android.OpenCVLoader
 import org.opencv.core.Mat
@@ -23,13 +23,7 @@ class MainActivity : KotlinBaseActivity<ActivityMainBinding>(), SurfaceHolder.Ca
     private val kTag = "MainActivity"
     private val yolov8ncnn by lazy { Yolov8ncnn() }
     private val mat by lazy { Mat() }
-
-    /**
-     * 需要和训练出来的模型里面类别顺序保持一致
-     * */
-    private val classArray = arrayOf("电线整洁", "电线杂乱", "餐馆厨房")
     private var facing = 1
-    private var isShowing = false
 
     override fun initEvent() {
 
@@ -40,11 +34,13 @@ class MainActivity : KotlinBaseActivity<ActivityMainBinding>(), SurfaceHolder.Ca
 
         OpenCVLoader.initLocal()
 
+
+
         binding.surfaceView.holder.setFormat(PixelFormat.RGBA_8888)
         binding.surfaceView.holder.addCallback(this)
 
-//        yolov8ncnn.loadModel(assets, 1, false, true, false, false)
-        yolov8ncnn.loadMultiModel(assets, intArrayOf(0, 2), false)
+        yolov8ncnn.loadModel(assets, 2, false, false, false, true)
+//        yolov8ncnn.loadMultiModel(assets, intArrayOf(0, 2), false)
     }
 
     override fun initViewBinding(): ActivityMainBinding {
@@ -64,50 +60,7 @@ class MainActivity : KotlinBaseActivity<ActivityMainBinding>(), SurfaceHolder.Ca
     }
 
     override fun onClassify(possibles: FloatArray) {
-        //找出最大值的下标
-        var max = possibles[0]
-        var maxIndex = 0
-        possibles.forEachIndexed { index, fl ->
-            if (fl > max) {
-                max = fl
-                maxIndex = index
-            }
-        }
-
-        try {
-            Log.d(kTag, "${possibles.contentToString()} - ${classArray[maxIndex]}")
-            if (isShowing) {
-                return
-            }
-            runOnUiThread {
-                isShowing = true
-                AlertControlDialog.Builder()
-                    .setContext(this)
-                    .setTitle("提示")
-                    .setMessage("识别到目标场景，是否开始排查该场景的隐患？")
-                    .setNegativeButton("稍后")
-                    .setPositiveButton("好的").setOnDialogButtonClickListener(object :
-                        AlertControlDialog.OnDialogButtonClickListener {
-                        override fun onConfirmClick() {
-                            //更换为检测模型
-                            yolov8ncnn.loadModel(
-                                assets,
-                                2,
-                                false,
-                                false,
-                                false,
-                                true
-                            )
-                        }
-
-                        override fun onCancelClick() {
-                            isShowing = false
-                        }
-                    }).build().show()
-            }
-        } catch (e: ArrayIndexOutOfBoundsException) {
-            e.printStackTrace()
-        }
+        Log.d(kTag, possibles.contentToString())
     }
 
     override fun onSegmentation(
@@ -119,15 +72,15 @@ class MainActivity : KotlinBaseActivity<ActivityMainBinding>(), SurfaceHolder.Ca
             val yolo = YoloResult()
 
             val array = FloatArray(4)
-            array[0] = it[0]
-            array[1] = it[1]
-            array[2] = it[2]
-            array[3] = it[3]
+            array[0] = it[0].dp2px(this)
+            array[1] = it[1].dp2px(this)
+            array[2] = it[2].dp2px(this)
+            array[3] = it[3].dp2px(this)
             yolo.position = array
 
             yolo.type = it[4].toInt()
 
-            yolo.prob = "${it[5]}%"
+            yolo.prob = "${"%.2f".format(it[5])}%"
             segmentationResults.add(yolo)
         }
 
@@ -136,15 +89,15 @@ class MainActivity : KotlinBaseActivity<ActivityMainBinding>(), SurfaceHolder.Ca
             val yolo = YoloResult()
 
             val array = FloatArray(4)
-            array[0] = it[0]
-            array[1] = it[1]
-            array[2] = it[2]
-            array[3] = it[3]
+            array[0] = it[0].dp2px(this)
+            array[1] = it[1].dp2px(this)
+            array[2] = it[2].dp2px(this)
+            array[3] = it[3].dp2px(this)
             yolo.position = array
 
             yolo.type = it[4].toInt()
 
-            yolo.prob = "${it[5]}%"
+            yolo.prob = "${"%.2f".format(it[5])}%"
             detectResults.add(yolo)
         }
         binding.detectView.updateTargetPosition(segmentationResults, detectResults)
@@ -162,16 +115,16 @@ class MainActivity : KotlinBaseActivity<ActivityMainBinding>(), SurfaceHolder.Ca
             val yolo = YoloResult()
 
             val array = FloatArray(4)
-            array[0] = it[0]
-            array[1] = it[1]
-            array[2] = it[2]
-            array[3] = it[3]
+            array[0] = it[0].dp2px(this)
+            array[1] = it[1].dp2px(this)
+            array[2] = it[2].dp2px(this)
+            array[3] = it[3].dp2px(this)
             yolo.position = array
 
             yolo.type = it[4].toInt()
 
             //保留两位有效小数
-            yolo.prob = "${String.format("%.2f", it[5])}%"
+            yolo.prob = "${"%.2f".format(it[5])}%"
             results.add(yolo)
         }
         Log.d(kTag, results.toJson())
