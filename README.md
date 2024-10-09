@@ -89,7 +89,10 @@ android {
         targetSdkVersion 33
         versionCode 1000
         versionName "1.0.0.0"
-
+        ndkVersion "26.1.10909125"
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64", "x86"
+        }
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -144,11 +147,17 @@ dependencies {
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.casic.test">
 
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature 
+        android:name="android.hardware.camera" 
+        android:required="false" />
 
-    <application android:allowBackup="true" android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true" android:theme="@style/Theme.Test">
+    <application 
+        android:allowBackup="true" 
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name" 
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true" 
+        android:theme="@style/Theme.Test">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -231,18 +240,18 @@ project根据实际情况修改即可，然后点击”Sync Now“
 #### 3.3、集成opencv-mobile框架
 
 同理，先去[opencv-mobile](https://github.com/nihui/opencv-mobile/releases/tag/v27)
-下载框架，如图：
+下载最新框架，如图（最新版本是：4.10.0）：
 
 ![微信截图_20240603181800.png](imags/微信截图_20240603181800.png)
 
-然后解压，复制到项目的cpp目录下，**不要改任何文件以及代码**，如下图：
+然后解压，复制到项目的cpp目录下，**不要改任何文件以及代码**，如下图（**最新版本是：4.10.0**）：
 
 ![微信截图_20240603182024.png](imags/微信截图_20240603182024.png)
 
 修改上一步的 [CMakeLists.txt](app/src/main/cpp/CMakeLists.txt)，添加如下代码：
 
 ```cmake
-set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/opencv-mobile-2.4.13.7-android/sdk/native/jni)
+set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/opencv-mobile-4.10.0-android/sdk/native/jni)
 find_package(OpenCV REQUIRED core imgproc)
 ```
 
@@ -283,7 +292,7 @@ implementation project(':sdk')
     }
 ```
 
-3. 最后在主界面点击”Try Again“即可完成OpenCV的集成，最后效果如下：
+3. 最后在主界面点击”Try Again“即可完成OpenCV的集成，最后效果如下（**最新版本是：4.10.0**）：
 
 ![微信截图_20240604084455.png](imags/微信截图_20240604084455.png)
 
@@ -303,30 +312,54 @@ JNI（Java Native Interface），是方便Java/Kotlin调用C/C++等Native代码�
 
 #### 5.2、新建 [Yolov8ncnn.java](ap/src/main/java/com/pengxh/ncnn/yolov8/Yolov8ncnn.java)
 
-在 **app/src/main/java/自己的包名** 目录下新建 Yolov8ncnn.java（Yolov8ncnn.kt 也是可以的），代码如下：
+在 **app/src/main/java/自己的包名** 目录下新建 Yolov8ncnn.kt（Yolov8ncnn.java 也是可以的），代码如下：
 
-```java
-public class Yolov8ncnn {
-    static {
-        System.loadLibrary("yolov8ncnn");
+```kotlin
+class Yolov8ncnn {
+  companion object {
+    init {
+      System.loadLibrary("yolov8ncnn")
     }
+  }
 
-    //单模型
-    public native boolean loadModel(AssetManager mgr, int model_id, boolean use_gpu, boolean use_classify, boolean use_segmentation, boolean use_detect);
+  /**
+   * @param mgr 手机内存资源管理器
+   * @param modelId 模型ID
+   * @param useGpu 是否使用GPU
+   * @param useClassify 是否使用分类模型
+   * @param useSegmentation 是否使用分割模型
+   * @param useDetect 是否使用检测模型
+   * */
+  external fun loadModel(
+    mgr: AssetManager, modelId: Int, useGpu: Boolean, useClassify: Boolean,
+    useSegmentation: Boolean, useDetect: Boolean
+  ): Boolean
 
-    //多模型
-    public native boolean loadMultiModel(AssetManager mgr, int[] ids, boolean use_gpu);
+  /**
+   * @param mgr 手机内存资源管理器
+   * @param ids 多模型ID数组
+   * @param useGpu 是否使用GPU
+   * */
+  external fun loadMultiModel(mgr: AssetManager, ids: IntArray, useGpu: Boolean): Boolean
 
-    public native boolean openCamera(int facing);
+  /**
+   * @param facing 相机 0-前置镜头，1-后置镜头
+   * */
+  external fun openCamera(facing: Int): Boolean
 
-    public native boolean closeCamera();
+  external fun closeCamera(): Boolean
 
-    public native boolean setOutputWindow(Surface surface, long nativeObjAddr, INativeCallback nativeCallback);
+  external fun setOutputWindow(
+    surface: Surface, nativeObjAddr: Long, callBack: INativeCallback
+  ): Boolean
+
+  external fun onPause(): Boolean
+
+  external fun onRestart(): Boolean
 }
 ```
 
-static（Kotlin里面是companion
-object，伴生对象）包裹的代码意思是C/C++代码编译之后动态链接库的名字（此时还没有，因为还没有添加C/C++代码）。另外四个方法和普通的Java方法的区别在于全部都有native关键字修饰（Kotlin里面是external），表明这几个方法需要调用C/C++代码，也就是前文提到的”桥梁“。此时代码会报错，是因为还没有在C/C++里面实现它们，先不用管。
+companion object（伴生对象，类似Java里面的static关键字）包裹的代码意思是C/C++代码编译之后动态链接库的名字（此时还没有，因为还没有添加C/C++代码）。另外四个方法和普通的Kotlin方法的区别在于全部都有external关键字修饰（Java里面是native），表明这几个方法需要调用C/C++代码，也就是前文提到的”桥梁“。此时代码会报错，是因为还没有在C/C++里面实现它们，先不用管。
 
 #### 5.3、将本项目的 [ndkcamera.cpp](app/src/main/cpp/ndkcamera.cpp) 和 [ndkcamera.h](app/src/main/cpp/ndkcamera.h) 复制到自己项目
 
@@ -338,7 +371,7 @@ object，伴生对象）包裹的代码意思是C/C++代码编译之后动态链
 
 #### 5.5、将本项目的 [yolov8ncnn.cpp](app/src/main/cpp/yolov8ncnn.cpp) 复制到自己项目
 
-此代码文件主要包括相机初始化，参数初始化。整体来说就是各种初始化。
+此代码文件主要包括相机初始化，参数初始化。整体来说就是各种初始化以及状态管理。
 
 #### 5.6、修改 app/src/main/cpp 目录下的 [CMakeLists.txt](app/src/main/cpp/CMakeLists.txt)
 
@@ -351,12 +384,25 @@ target_link_libraries(yolov8ncnn ncnn ${OpenCV_LIBS} camera2ndk mediandk)
 ```
 
 最终的cmake代码如下图：
-![微信截图_20240604135827.png](imags/微信截图_20240604135827.png)
+```cmake
+project(yolov8ncnn)
+
+cmake_minimum_required(VERSION 3.10)
+
+set(OpenCV_DIR ${CMAKE_SOURCE_DIR}/opencv-mobile-4.10.0-android/sdk/native/jni)
+find_package(OpenCV REQUIRED core imgproc)
+
+set(ncnn_DIR ${CMAKE_SOURCE_DIR}/ncnn-20240102-android-vulkan/${ANDROID_ABI}/lib/cmake/ncnn)
+find_package(ncnn REQUIRED)
+
+add_library(yolov8ncnn SHARED yolov8ncnn.cpp yolo.cpp ndkcamera.cpp)
+
+target_link_libraries(yolov8ncnn ncnn ${OpenCV_LIBS} camera2ndk mediandk)
+```
 
 #### 5.7、Java/C/C++代码调整
 
 复制过去的yolov8ncnn.cpp文件，有四个函数一定是没有高亮的，如下图：
-
 ![微信截图_20240707213433.png](imags/微信截图_20240707213433.png)
 
 此时需要将此函数根据情况修改为自己项目包名_函数名的方式，”.“用”_
@@ -546,21 +592,22 @@ jmethodID j_method_id = env->GetMethodID(callback_clazz, "onDetect", "(Ljava/uti
 3. 给回调入参的jobject设置值。此处只举个复杂点例子，基本类型的很简单就不展示了，具体返回值要看自己的逻辑
 
 ```cpp
-        for (const auto &item: objects) {
-            float array[6];
-            array[0] = item.rect.x;
-            array[1] = item.rect.y;
-            array[2] = item.rect.width;
-            array[3] = item.rect.height;
-            array[4] = (float) item.label;
-            array[5] = item.prob * 100;
+          for (const auto &item: objects) {
+                auto rect = item.rect;
 
-            jfloatArray result_array = env->NewFloatArray(6);
-            env->SetFloatArrayRegion(result_array, 0, 6, array);
+                float array[5];
+                array[0] = rect.x;
+                array[1] = rect.y;
+                array[2] = rect.x + rect.width;
+                array[3] = rect.y + rect.height;
+                array[4] = (float) item.label;
 
-            //add
-            env->CallBooleanMethod(arraylist_obj, arraylist_add, result_array);
-        }
+                jfloatArray result_array = env->NewFloatArray(5);
+                env->SetFloatArrayRegion(result_array, 0, 5, array);
+
+                //add
+                env->CallBooleanMethod(segment_array_obj, arraylist_add, result_array);
+          }
 ```
 
 上面的代码意思是给float[]赋值，从签名”[F“可以看出来，然后将float[]数组通过反射添加进ArrayList
@@ -596,12 +643,16 @@ private val mat by lazy { Mat() }
 override fun initOnCreate(savedInstanceState: Bundle?) {
   window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-  OpenCVLoader.initLocal()
+  val openCVNativeLoader = OpenCVNativeLoader()
+  openCVNativeLoader.init()
+
+  yolov8ncnn.loadModel(
+    assets, 2, useGpu = false,
+    useClassify = false, useSegmentation = false, useDetect = true
+  )
 
   binding.surfaceView.holder.setFormat(PixelFormat.RGBA_8888)
   binding.surfaceView.holder.addCallback(this)
-
-  yolov8ncnn.loadModel(assets, 1, false, true, false, false)
 }
 ```
 
@@ -620,7 +671,7 @@ override fun onResume() {
             this, arrayOf(Manifest.permission.CAMERA), 100
         )
     }
-    yolov8ncnn.openCamera(facing)
+    yolov8ncnn.openCamera(1)
 }
 ```
 
@@ -638,40 +689,70 @@ override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, heig
 
 ```kotlin
 override fun onDetect(output: ArrayList<FloatArray>) {
-  //转成泛型集合
-  val results = ArrayList<YoloResult>()
-  output.forEach {
-    /**
-     * 前四位是目标Rect，第五位是目标名对应的角标，第六位是可信度
-     *
-     * [135.88397,120.17752,68.061325,204.02115,28.0,43.642334]
-     * */
-    val yolo = YoloResult()
-
-    val array = FloatArray(4)
-    array[0] = it[0]
-    array[1] = it[1]
-    array[2] = it[2]
-    array[3] = it[3]
-    yolo.position = array
-
-    yolo.type = it[4].toInt()
-
-    //保留两位有效小数
-    yolo.prob = "${String.format("%.2f", it[5])}%"
-    results.add(yolo)
+  if (output.isEmpty()) {
+    return
   }
-  Log.d(kTag, results.toJson())
-  binding.detectView.updateTargetPosition(results)
 
-  if (mat.width() > 0 || mat.height() > 0) {
-    val bitmap = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888)
-    Utils.matToBitmap(mat, bitmap, true)
-    bitmap.saveImage("${createImageFileDir()}/${System.currentTimeMillis()}.png")
-  } else {
-    Log.d(kTag, "width: ${mat.width()}, height: ${mat.height()}")
-  }
+  //暂停算法
+  yolov8ncnn.onPause()
+  weakReferenceHandler.sendEmptyMessageDelayed(2024082901, 1000)
 }
+```
+
+调用单模型（检测）获取目标所对应的场景，然后再根据场景切换为多模型（分割+检测）
+
+```kotlin
+    override fun handleMessage(msg: Message): Boolean {
+        when (msg.what) {
+            2024082901 -> {
+                AlertControlDialog.Builder()
+                    .setContext(this)
+                    .setTitle("温馨提示")
+                    .setMessage("识别到目标场景，是否开始识别目标？")
+                    .setNegativeButton("重新识别")
+                    .setPositiveButton("开始检查")
+                    .setOnDialogButtonClickListener(object :
+                        AlertControlDialog.OnDialogButtonClickListener {
+                        override fun onConfirmClick() {
+                            //调用多模型
+                            yolov8ncnn.loadMultiModel(assets, intArrayOf(0, 2), false)
+                        }
+
+                        override fun onCancelClick() {
+                            yolov8ncnn.onRestart()
+                        }
+                    }).build().show()
+            }
+        }
+        return true
+    }
+```
+
+处理多模型结果
+
+```kotlin
+    override fun onSegmentation(segmentationOutput: ArrayList<FloatArray>, detectOutput: ArrayList<FloatArray>) {
+        //转成泛型集合
+        val segmentationResults = ArrayList<YoloResult>()
+        segmentationOutput.forEach {
+            segmentationResults.add(it.convert2YoloResult(this))
+        }
+
+        val detectResults = ArrayList<YoloResult>()
+        detectOutput.forEach {
+            detectResults.add(it.convert2YoloResult(this))
+        }
+
+        binding.detectView.updateTargetPosition(segmentationResults, detectResults)
+
+//        if (mat.width() > 0 || mat.height() > 0) {
+//            val bitmap = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888)
+//            Utils.matToBitmap(mat, bitmap, true)
+//            bitmap.saveImage("${createImageFileDir()}/${System.currentTimeMillis()}.png")
+//        } else {
+//            Log.d(kTag, "width: ${mat.width()}, height: ${mat.height()}")
+//        }
+    }
 ```
 
 此时detectView会报错，因为这是个自定义控件，可先注释掉，后面再说。
