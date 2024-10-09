@@ -609,16 +609,15 @@ int Yolo::segmentation(const cv::Mat &rgb, std::vector<Object> &objects, float p
             for (const auto &item: objects) {
                 auto rect = item.rect;
 
-                float array[6];
+                float array[5];
                 array[0] = rect.x;
                 array[1] = rect.y;
-                array[2] = rect.width;
-                array[3] = rect.height;
+                array[2] = rect.x + rect.width;
+                array[3] = rect.y + rect.height;
                 array[4] = (float) item.label;
-                array[5] = item.prob * 100;
 
-                jfloatArray result_array = env->NewFloatArray(6);
-                env->SetFloatArrayRegion(result_array, 0, 6, array);
+                jfloatArray result_array = env->NewFloatArray(5);
+                env->SetFloatArrayRegion(result_array, 0, 5, array);
 
                 //add
                 env->CallBooleanMethod(segment_array_obj, arraylist_add, result_array);
@@ -683,16 +682,15 @@ int Yolo::segmentation(const cv::Mat &rgb, std::vector<Object> &objects, float p
             for (const auto &item: objects) {
                 auto rect = item.rect;
 
-                float array[6];
+                float array[5];
                 array[0] = rect.x;
                 array[1] = rect.y;
-                array[2] = rect.width;
-                array[3] = rect.height;
+                array[2] = rect.x + rect.width;
+                array[3] = rect.y + rect.height;
                 array[4] = (float) item.label;
-                array[5] = item.prob * 100;
 
-                jfloatArray result_array = env->NewFloatArray(6);
-                env->SetFloatArrayRegion(result_array, 0, 6, array);
+                jfloatArray result_array = env->NewFloatArray(5);
+                env->SetFloatArrayRegion(result_array, 0, 5, array);
 
                 //add
                 env->CallBooleanMethod(detect_array_obj, arraylist_add, result_array);
@@ -701,6 +699,15 @@ int Yolo::segmentation(const cv::Mat &rgb, std::vector<Object> &objects, float p
 
         //回调
         env->CallVoidMethod(j_callback, j_method_id, segment_array_obj, detect_array_obj);
+
+        /**
+         * Mat数据。
+         * <br>-----------------------------------------------<br>
+         * 通过内存地址赋值。Java层传入Mat对象内存地址，再通过C++给此地址赋值，Java即可得到内存地址的Mat矩阵数据
+         * */
+        auto *res = (cv::Mat *) j_mat_addr;
+        res->create(rgb.rows, rgb.cols, rgb.type());
+        memcpy(res->data, rgb.data, rgb.rows * rgb.step);
     }
     return 0;
 }
@@ -831,81 +838,60 @@ int Yolo::detect(const cv::Mat &rgb, std::vector<Object> &objects, float prob_th
         jmethodID arraylist_add = env->GetMethodID(list_clazz, "add", "(Ljava/lang/Object;)Z");
         //初始化ArrayList对象
         jobject arraylist_obj = env->NewObject(list_clazz, arraylist_init);
-
         for (const auto &item: objects) {
-            auto rect = item.rect;
-
-            float array[6];
-            array[0] = rect.x;
-            array[1] = rect.y;
-            array[2] = rect.x + rect.width;
-            array[3] = rect.y + rect.height;
-            array[4] = (float) item.label;
-            array[5] = item.prob * 100;
-
-            jfloatArray result_array = env->NewFloatArray(6);
-            env->SetFloatArrayRegion(result_array, 0, 6, array);
+            char index[16];
+            sprintf(index, "%d", item.label);
 
             //add
-            env->CallBooleanMethod(arraylist_obj, arraylist_add, result_array);
+            env->CallBooleanMethod(arraylist_obj, arraylist_add, env->NewStringUTF(index));
         }
         //回调
         env->CallVoidMethod(j_callback, j_method_id, arraylist_obj);
-
-        /**
-         * Mat数据。
-         * <br>-----------------------------------------------<br>
-         * 通过内存地址赋值。Java层传入Mat对象内存地址，再通过C++给此地址赋值，Java即可得到内存地址的Mat矩阵数据
-         * */
-        auto *res = (cv::Mat *) j_mat_addr;
-        res->create(rgb.rows, rgb.cols, rgb.type());
-        memcpy(res->data, rgb.data, rgb.rows * rgb.step);
     }
     return 0;
 }
 
+static const char *class_names[] = {
+        "tripod", "tee", "person",
+        "shut-off valve", "hazard signs", "pressure tester",
+        "pressure gauge", "reflective clothing", "respirator masks",
+        "throat foil", "round-headed water gun", "safety signs",
+        "helmet", "security identification", "safety ropes",
+        "intercom", "pointed water gun", "switch",
+        "alarm device", "joint", "construction street signs",
+        "gas detectors", "hoses", "hose_rectangle",
+        "flow-meter", "fire hydrant box", "fire extinguisher",
+        "lighting equipment", "flame-out protection", "exposed wires",
+        "circuit diagram", "cordon", "regulator",
+        "length adjuster", "stickers", "across wires",
+        "road cones", "hose", "filter",
+        "distribution box", "long-shank valves", "valve", "ducts"
+};
+
+static const unsigned char colors[19][3] = {
+        {54,  67,  244},
+        {99,  30,  233},
+        {176, 39,  156},
+        {183, 58,  103},
+        {181, 81,  63},
+        {243, 150, 33},
+        {244, 169, 3},
+        {212, 188, 0},
+        {136, 150, 0},
+        {80,  175, 76},
+        {74,  195, 139},
+        {57,  220, 205},
+        {59,  235, 255},
+        {7,   193, 255},
+        {0,   152, 255},
+        {34,  87,  255},
+        {72,  85,  121},
+        {158, 158, 158},
+        {139, 125, 96}
+};
+
 int Yolo::draw(cv::Mat &rgb, const std::vector<Object> &objects) {
-    static const char *class_names[] = {
-            "tripod", "tee", "person",
-            "shut-off valve", "hazard signs", "pressure tester",
-            "pressure gauge", "reflective clothing", "respirator masks",
-            "throat foil", "round-headed water gun", "safety signs",
-            "helmet", "security identification", "safety ropes",
-            "intercom", "pointed water gun", "switch",
-            "alarm device", "joint", "construction street signs",
-            "gas detectors", "hoses", "hose_rectangle",
-            "flow-meter", "fire hydrant box", "fire extinguisher",
-            "lighting equipment", "flame-out protection", "exposed wires",
-            "circuit diagram", "cordon", "regulator",
-            "length adjuster", "stickers", "across wires",
-            "road cones", "hose", "filter",
-            "distribution box", "long-shank valves", "valve", "ducts"
-    };
-
-    static const unsigned char colors[19][3] = {
-            {54,  67,  244},
-            {99,  30,  233},
-            {176, 39,  156},
-            {183, 58,  103},
-            {181, 81,  63},
-            {243, 150, 33},
-            {244, 169, 3},
-            {212, 188, 0},
-            {136, 150, 0},
-            {80,  175, 76},
-            {74,  195, 139},
-            {57,  220, 205},
-            {59,  235, 255},
-            {7,   193, 255},
-            {0,   152, 255},
-            {34,  87,  255},
-            {72,  85,  121},
-            {158, 158, 158},
-            {139, 125, 96}
-    };
-
     int color_index = 0;
-
     for (const auto &obj: objects) {
         const unsigned char *color = colors[color_index % 19];
 

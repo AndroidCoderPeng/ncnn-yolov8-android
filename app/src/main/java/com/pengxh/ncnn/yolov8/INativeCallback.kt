@@ -1,20 +1,20 @@
-package com.pengxh.ncnn.yolov8;
+package com.pengxh.ncnn.yolov8
 
-import java.util.ArrayList;
-
-public interface INativeCallback {
+interface INativeCallback {
     /**
      * 分类
      */
-    void onClassify(float[] possibles);
+    fun onClassify(possibles: FloatArray)
 
     /**
      * 分割
      */
-    void onSegmentation(ArrayList<float[]> segmentationOutput, ArrayList<float[]> detectOutput);
+    fun onSegmentation(
+        segmentationOutput: ArrayList<FloatArray>, detectOutput: ArrayList<FloatArray>
+    )
 
     /**
-     * 检测
+     * 检测。只需要返回类别
      */
-    void onDetect(ArrayList<float[]> output);
+    fun onDetect(output: ArrayList<String>)
 }

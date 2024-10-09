@@ -43,11 +43,11 @@ class TargetDetectView constructor(context: Context, attrs: AttributeSet) : View
         val fontMetrics = textPaint.fontMetrics
         textHeight = (fontMetrics.bottom - fontMetrics.top).toInt()
 
-        backgroundPaint.color = Color.BLUE
+        backgroundPaint.color = Color.GREEN
         backgroundPaint.style = Paint.Style.FILL
         backgroundPaint.isAntiAlias = true
 
-        borderPaint.color = Color.BLUE
+        borderPaint.color = Color.GREEN
         borderPaint.style = Paint.Style.STROKE
         borderPaint.strokeJoin = Paint.Join.ROUND
         borderPaint.strokeWidth = 3f.dp2px(context) //设置线宽

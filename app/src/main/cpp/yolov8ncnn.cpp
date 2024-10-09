@@ -107,9 +107,9 @@ static int draw_fps(cv::Mat &rgb) {
     return 0;
 }
 
-static Yolo *g_yolo = nullptr;
+static Yolo *yolo_ptr = nullptr;
 static ncnn::Mutex lock;
-static JavaVM *javaVM = nullptr;
+static JavaVM *jvm_ptr = nullptr;
 
 class MyNdkCamera : public NdkCameraWindow {
 public:
@@ -121,20 +121,20 @@ void MyNdkCamera::on_image_render(cv::Mat &rgb) const {
     {
         ncnn::MutexLockGuard g(lock);
 
-        if (g_yolo) {
+        if (yolo_ptr) {
             //分类
-            g_yolo->classify(rgb);
+            yolo_ptr->classify(rgb);
 
             std::vector<Object> objects;
 
             //分割
-            g_yolo->segmentation(rgb, objects);
+            yolo_ptr->segmentation(rgb, objects);
 
             //检测
-            g_yolo->detect(rgb, objects);
+            yolo_ptr->detect(rgb, objects);
 
             //绘制
-            g_yolo->draw(rgb, objects);
+            yolo_ptr->draw(rgb, objects);
         } else {
             draw_unsupported(rgb);
         }
@@ -144,7 +144,7 @@ void MyNdkCamera::on_image_render(cv::Mat &rgb) const {
     draw_fps(rgb);
 }
 
-static MyNdkCamera *g_camera = nullptr;
+static MyNdkCamera *camera_ptr = nullptr;
 
 //分割、分类、检测
 const char *model_types[] = {"best-sim-opt-fp16", "model.ncnn", "yolov8s-detect-sim-opt-fp16"};
@@ -164,9 +164,9 @@ extern "C" {
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "JNI_OnLoad");
 
-    javaVM = vm;
+    jvm_ptr = vm;
 
-    g_camera = new MyNdkCamera;
+    camera_ptr = new MyNdkCamera;
 
     return JNI_VERSION_1_4;
 }
@@ -177,12 +177,12 @@ JNIEXPORT void JNI_OnUnload(JavaVM *vm, void *reserved) {
     {
         ncnn::MutexLockGuard g(lock);
 
-        delete g_yolo;
-        g_yolo = nullptr;
+        delete yolo_ptr;
+        yolo_ptr = nullptr;
     }
 
-    delete g_camera;
-    g_camera = nullptr;
+    delete camera_ptr;
+    camera_ptr = nullptr;
 }
 
 JNIEXPORT jboolean JNICALL
@@ -205,11 +205,11 @@ Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_loadModel(JNIEnv *env, jobject thiz,
 
         if (use_gpu && ncnn::get_gpu_count() == 0) {
             // no gpu
-            delete g_yolo;
-            g_yolo = nullptr;
+            delete yolo_ptr;
+            yolo_ptr = nullptr;
         } else {
-            if (!g_yolo)
-                g_yolo = new Yolo;
+            if (!yolo_ptr)
+                yolo_ptr = new Yolo;
             int state;
             if (use_classify) {
                 state = 1;
@@ -220,8 +220,8 @@ Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_loadModel(JNIEnv *env, jobject thiz,
             if (use_detect) {
                 state = 3;
             }
-            g_yolo->j_state = state;
-            g_yolo->load(
+            yolo_ptr->j_state = state;
+            yolo_ptr->load(
                     mgr,
                     model_type,
                     target_size,
@@ -256,14 +256,14 @@ Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_loadMultiModel(JNIEnv *env, jobject thiz,
 
             if (use_gpu && ncnn::get_gpu_count() == 0) {
                 // no gpu
-                delete g_yolo;
-                g_yolo = nullptr;
+                delete yolo_ptr;
+                yolo_ptr = nullptr;
             } else {
-                if (!g_yolo)
-                    g_yolo = new Yolo;
-                g_yolo->j_state = 2;
+                if (!yolo_ptr)
+                    yolo_ptr = new Yolo;
+                yolo_ptr->j_state = 2;
                 if (*id == 0) {
-                    g_yolo->load(
+                    yolo_ptr->load(
                             mgr,
                             model_type,
                             target_size,
@@ -275,7 +275,7 @@ Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_loadMultiModel(JNIEnv *env, jobject thiz,
                             use_gpu
                     );
                 } else {
-                    g_yolo->load(
+                    yolo_ptr->load(
                             mgr,
                             model_type,
                             target_size,
@@ -301,8 +301,10 @@ Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_openCamera(JNIEnv *env, jobject thiz, jin
 
     __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "openCamera %d", facing);
 
-    g_camera->open((int) facing);
-
+    if (camera_ptr == nullptr) {
+        return JNI_FALSE;
+    }
+    camera_ptr->open((int) facing);
     return JNI_TRUE;
 }
 
@@ -310,8 +312,10 @@ JNIEXPORT jboolean JNICALL
 Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_closeCamera(JNIEnv *env, jobject thiz) {
     __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "closeCamera");
 
-    g_camera->close();
-
+    if (camera_ptr == nullptr) {
+        return JNI_FALSE;
+    }
+    camera_ptr->close();
     return JNI_TRUE;
 }
 
@@ -321,9 +325,33 @@ Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_setOutputWindow(JNIEnv *env, jobject thiz
                                                        jobject native_callback) {
     ANativeWindow *win = ANativeWindow_fromSurface(env, surface);
 
-    g_camera->set_window(win);
+    if (camera_ptr == nullptr) {
+        return JNI_FALSE;
+    }
+    camera_ptr->set_window(win);
 
-    g_yolo->initNativeCallback(javaVM, nativeObjAddr, native_callback);
+    if (yolo_ptr == nullptr) {
+        return JNI_FALSE;
+    }
+    yolo_ptr->initNativeCallback(jvm_ptr, nativeObjAddr, native_callback);
+    return JNI_TRUE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_onPause(JNIEnv *env, jobject thiz) {
+    if (yolo_ptr == nullptr) {
+        return JNI_FALSE;
+    }
+    yolo_ptr->j_state = 0;
+    return JNI_TRUE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_pengxh_ncnn_yolov8_Yolov8ncnn_onRestart(JNIEnv *env, jobject thiz) {
+    if (yolo_ptr == nullptr) {
+        return JNI_FALSE;
+    }
+    yolo_ptr->j_state = 3;
     return JNI_TRUE;
 }
 }
