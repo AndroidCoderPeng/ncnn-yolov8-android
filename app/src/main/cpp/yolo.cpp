@@ -349,43 +349,6 @@ static void decode_mask(const ncnn::Mat &mask_feat, const int &img_w, const int 
 }
 
 /***模型分割*************/
-
-//目标类别
-static const char *class_names[] = {
-        "tripod", "tee", "person", "shut-off valve", "hazard signs", "pressure tester",
-        "pressure gauge", "reflective clothing", "respirator masks", "throat foil",
-        "round-headed water gun", "safety signs", "helmet", "security identification",
-        "safety ropes", "intercom", "pointed water gun", "switch", "alarm device", "joint",
-        "construction street signs", "gas detectors", "hoses", "hose_rectangle", "flow-meter",
-        "fire hydrant box", "fire extinguisher", "lighting equipment", "flame-out protection",
-        "exposed wires", "circuit diagram", "cordon", "regulator", "length adjuster", "stickers",
-        "across wires", "road cones", "hose", "filter", "distribution box", "long-shank valves",
-        "valve", "ducts"
-};
-
-//目标颜色数组
-static const unsigned char colors[19][3] = {
-        {54,  67,  244},
-        {99,  30,  233},
-        {176, 39,  156},
-        {183, 58,  103},
-        {181, 81,  63},
-        {243, 150, 33},
-        {244, 169, 3},
-        {212, 188, 0},
-        {136, 150, 0},
-        {80,  175, 76},
-        {74,  195, 139},
-        {57,  220, 205},
-        {59,  235, 255},
-        {7,   193, 255},
-        {0,   152, 255},
-        {34,  87,  255},
-        {72,  85,  121},
-        {158, 158, 158},
-        {139, 125, 96}
-};
-
 Yolo::Yolo() {
     blob_pool_allocator.set_size_compare_ratio(0.f);
     workspace_pool_allocator.set_size_compare_ratio(0.f);
